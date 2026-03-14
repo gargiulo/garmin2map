@@ -1,2 +1,4 @@
 # garmin2map
-Exports activities from Garmin Connect as GPX files and generates a map showing all tracks
+Exports Garmin Connect activities of a certain type (e.g. cycling) as GPX files and generates a map showing all aggregated tracks. The tracks are color-coded based on elevation gain and grouped into layers by year.
+
+![Example map](images/garmin2map.png)
