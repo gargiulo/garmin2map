@@ -7,6 +7,14 @@ from branca.colormap import LinearColormap
 # Focus map on this initial location
 INIT_LOCATION = [47.3769, 8.5417]  # Zurich, Switzerland
 
+def format_duration(seconds):
+    hours = int(seconds // 3600)
+    minutes = int((seconds % 3600) // 60)
+    if hours > 0:
+        return f"{hours}h {minutes}m"
+    else:
+        return f"{minutes}m"
+
 def compute_elevation_gain(segment):  # Function: Compute elevation gain for a GPX segment
     gain = 0
     elevations = [p.elevation for p in segment.points if p.elevation is not None]
@@ -43,10 +51,23 @@ for gpx_file in glob.glob("gpx_files/*.gpx"):
     total_gain = 0
     total_distance = 0
 
+    # Collect all timestamps to compute duration
+    all_times = []
     for track in gpx.tracks:
         for segment in track.segments:
             total_gain += compute_elevation_gain(segment)
             total_distance += segment.length_3d() / 1000.0  # km
+            for point in segment.points:
+                if point.time:
+                    all_times.append(point.time)
+
+    if all_times:
+        start_time = min(all_times)
+        end_time = max(all_times)
+        duration = end_time - start_time
+        total_duration = duration.total_seconds()
+    else:
+        total_duration = 0
 
     year = gpx.time.year if gpx.time else "Unknown"
 
@@ -56,7 +77,7 @@ for gpx_file in glob.glob("gpx_files/*.gpx"):
     year_stats[year]["distance"] += total_distance
     year_stats[year]["gain"] += total_gain
 
-    elevation_data.append((gpx_file, total_gain, total_distance))
+    elevation_data.append((gpx_file, total_gain, total_distance, total_duration))
 
 # Determine min/max elevation gain for colormap
 if elevation_data:
@@ -116,7 +137,7 @@ function(feature, layer) {
 """
 
 # Second pass: draw tracks
-for gpx_file, elevation_gain, total_distance in elevation_data:
+for gpx_file, elevation_gain, total_distance, total_duration in elevation_data:
     with open(gpx_file, "r") as f:
         gpx = gpxpy.parse(f)
 
@@ -130,6 +151,7 @@ for gpx_file, elevation_gain, total_distance in elevation_data:
         f"<div style='width: 150px'><b>{activity_name}</b></div><br>"
         f"Date: {activity_time}<br>"
         f"Distance: {total_distance:.1f} km<br>"
+        f"Duration: {format_duration(total_duration)}<br>"
         f"Elevation gain: {int(elevation_gain)} m"
     )
 
